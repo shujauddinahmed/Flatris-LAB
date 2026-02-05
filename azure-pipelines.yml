@@ -1,21 +1,52 @@
-# Node.js with React
-# Build a Node.js project that uses React.
-# Add steps that analyze code, save build artifacts, deploy, and more:
-# https://docs.microsoft.com/azure/devops/pipelines/languages/javascript
-
 trigger:
 - master
 
 pool:
   name: MyWindowsAgent
 
-steps:
-- task: NodeTool@0
-  inputs:
-    versionSpec: '20.x'
-  displayName: 'Install Node.js'
+stages:
 
-- script: |
-    npm install
-    npm run build
-  displayName: 'npm install and build'
+# ---------- BUILD ----------
+- stage: Build
+  jobs:
+  - job: BuildJob
+    steps:
+
+    - task: NodeTool@0
+      inputs:
+        versionSpec: '20.x'
+
+    - script: |
+        npm install
+        npm run build
+
+    - task: ArchiveFiles@2
+      inputs:
+        rootFolderOrFile: build
+        includeRootFolder: false
+        archiveType: zip
+        archiveFile: $(Build.ArtifactStagingDirectory)/app.zip
+
+    - publish: $(Build.ArtifactStagingDirectory)/app.zip
+      artifact: drop
+
+
+# ---------- DEPLOY ----------
+- stage: Deploy
+  dependsOn: Build
+  jobs:
+  - deployment: DeployWeb
+    environment: production
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+
+          - download: current
+            artifact: drop
+
+          - task: AzureWebApp@1
+            inputs:
+              azureSubscription: AzureConnection
+              appName: shuja-react-app123
+              package: $(Pipeline.Workspace)/drop/app.zip
