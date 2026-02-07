@@ -19,10 +19,13 @@ stages:
     - script: |
         npm install
         npm run build
+        
+    - script: dir
+      displayName: "Verify build output"
 
     - task: ArchiveFiles@2
       inputs:
-        rootFolderOrFile: build
+        rootFolderOrFile: $(Build.SourcesDirectory)/dist
         includeRootFolder: false
         archiveType: zip
         archiveFile: $(Build.ArtifactStagingDirectory)/app.zip
